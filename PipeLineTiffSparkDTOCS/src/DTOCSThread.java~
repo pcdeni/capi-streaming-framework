@@ -1,0 +1,171 @@
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+
+public class DTOCSThread /*extends Thread*/ {
+	private BufferedImage image;
+	//private double alpha;
+	private int alpha;
+	public double[] result;
+	
+	public DTOCSThread(BufferedImage sourceImage, double alphaValue){
+		image = sourceImage;
+		double alpha_tmp = alphaValue;
+		alpha_tmp = alpha_tmp*10000; //double (<1) to int (fixed point) conversion
+		alpha = (int) alpha_tmp;
+	}
+	
+	public void run(){
+		result = DTOCS(((DataBufferByte)image.getRaster().getDataBuffer()).getData(), image.getWidth(), image.getHeight(),alpha);
+	}
+
+	public native int[] DTOCS_cpp (byte[] data /*24x*/, int imageWidth /*1436*/, int imageHeight /*814*/, int alpha);	
+
+	/*public static int[] toInt( byte[] bytes ) {
+		int[] result = new int[bytes.length];
+		for (int i=0; i<bytes.length; i++) {
+			result[i] = (int) bytes[i];
+		}
+		return result;
+	}*/
+
+	public static double[] toDouble( int[] ints ) {
+		double[] result = new double[ints.length];
+		for (int i=0; i<ints.length; i++) {
+			result[i] = ints[i];
+		}
+		return result;
+	}
+
+	private double[] DTOCS(byte[] data, int imageWidth, int imageHeight, int alpha){
+
+		System.loadLibrary("libDTOCSThread");
+	        //int[] transformedData_tmp = this.DTOCS_cpp(toInt(data) (24x), imageWidth (1436), imageHeight (814), alpha);
+		int[] grayData = new int[(imageWidth + 2) * (imageHeight + 2)];
+		
+		for(int i =1; i < imageHeight+1; i++){
+			for(int j = 1; j <  imageWidth+1; j++){
+				grayData[i * (imageWidth + 2) + j] = Math.round(2989 * (data[(i - 1) * imageWidth * 3 + (j - 1) * 3 ] &0xFF) + 5870 * (data[(i - 1) * imageWidth * 3 + (j - 1) * 3 + 1] &0xFF) + 1140 * (data[(i - 1) * imageWidth * 3 + (j - 1) * 3 + 2] &0xFF));
+			}
+		}
+
+		int[] transformedData_tmp = this.DTOCS_cpp(grayData, imageWidth, imageHeight, alpha);
+		double[] transformedData = toDouble(transformedData_tmp);
+		for (int i = 0; i<transformedData.length; i++)		{
+			transformedData[i] = transformedData[i]/10000; // int (fixed point) to double conversion
+		}		
+
+		return transformedData;
+
+	}
+
+	/*
+	private static double[] DTOCS(byte[]  data, int imageWidth, int imageHeight, double alpha){
+
+		double[] grayData = new double[(imageWidth+2) * (imageHeight+2)];
+		double[] grayDataTemp = new double[grayData.length];
+		for(int i =1; i < imageHeight+1; i++){
+			for(int j = 1; j <  imageWidth+1; j++){
+				grayData[i*(imageWidth+2) + j] = Math.round(0.2989*(data[(i-1)*imageWidth*3 + (j-1)*3 ] &0xFF) + 0.5870*(data[(i-1)*imageWidth*3 + (j-1)*3 + 1]&0xFF) + 0.1140*(data[(i-1)*imageWidth*3 + (j-1)*3+2]&0xFF));
+				grayDataTemp[i*(imageWidth+2) + j] = Double.POSITIVE_INFINITY;
+			}
+		}
+		for(int u =0; u < 4; u++){
+			for(int i =1; i < imageHeight+1; i++){
+				for(int j = 1; j < imageWidth+1; j++){
+					double a = grayData[(i-1)*(imageWidth+2) + (j-1)];
+					double b = grayData[(i)*(imageWidth+2) + (j-1)];
+					double e = grayData[(i+1)*(imageWidth+2) + (j-1)];
+					double d = grayData[(i-1)*(imageWidth+2) + (j)];
+					double c = grayData[i*(imageWidth+2) + j];
+					
+					double a2 = grayDataTemp[(i-1)*(imageWidth+2) + (j-1)];
+					double b2 = grayDataTemp[(i)*(imageWidth+2) + (j-1)];
+					double e2 = grayDataTemp[(i+1)*(imageWidth+2) + (j-1)];
+					double d2 = grayDataTemp[(i-1)*(imageWidth+2) + (j)];
+					double c2 = grayDataTemp[i*(imageWidth+2) + j];
+					
+					double da = Math.abs(c-a);
+					double db = Math.abs(c-b);
+					double de = Math.abs(c-e);
+					double dd = Math.abs(c-d);
+					
+					grayDataTemp[i*(imageWidth+2) + j] =   alpha*Math.min(c2, Math.min(Math.min(da+a2+1,db+b2+1),Math.min(de+e2+1,dd+d2+1)));
+				}
+			}
+			for(int i = imageHeight; i > 0 ; i--){
+				for(int j = imageWidth; j > 0; j--){
+					double a = grayData[(i+1)*(imageWidth+2) + (j+1)];
+					double b = grayData[(i)*(imageWidth+2) + (j+1)];
+					double e = grayData[(i-1)*(imageWidth+2) + (j+1)];
+					double d = grayData[(i+1)*(imageWidth+2) + (j)];
+					double c = grayData[i*(imageWidth+2) + j];
+					
+					double a2 = grayDataTemp[(i+1)*(imageWidth+2) + (j+1)];
+					double b2 = grayDataTemp[(i)*(imageWidth+2) + (j+1)];
+					double e2 = grayDataTemp[(i-1)*(imageWidth+2) + (j+1)];
+					double d2 = grayDataTemp[(i+1)*(imageWidth+2) + (j)];
+					double c2 = grayDataTemp[i*(imageWidth+2) + j];
+					
+					double da = Math.abs(c-a);
+					double db = Math.abs(c-b);
+					double de = Math.abs(c-e);
+					double dd = Math.abs(c-d);
+					
+					grayDataTemp[i*(imageWidth+2) + j] =   alpha*Math.min(c2, Math.min(Math.min(da+a2+1,db+b2+1),Math.min(de+e2+1,dd+d2+1)));
+				}
+			}
+			for(int i = imageHeight; i > 0 ; i--){
+				for(int j = 1; j < imageWidth+1; j++){
+					double a = grayData[(i-1)*(imageWidth+2) + (j-1)];
+					double b = grayData[(i)*(imageWidth+2) + (j-1)];
+					double e = grayData[(i+1)*(imageWidth+2) + (j-1)];
+					double d = grayData[(i+1)*(imageWidth+2) + (j)];
+					double c = grayData[i*(imageWidth+2) + j];
+					
+					double a2 = grayDataTemp[(i-1)*(imageWidth+2) + (j-1)];
+					double b2 = grayDataTemp[(i)*(imageWidth+2) + (j-1)];
+					double e2 = grayDataTemp[(i+1)*(imageWidth+2) + (j-1)];
+					double d2 = grayDataTemp[(i+1)*(imageWidth+2) + (j)];
+					double c2 = grayDataTemp[i*(imageWidth+2) + j];
+					
+					double da = Math.abs(c-a);
+					double db = Math.abs(c-b);
+					double de = Math.abs(c-e);
+					double dd = Math.abs(c-d);
+					
+					grayDataTemp[i*(imageWidth+2) + j] =   alpha*Math.min(c2, Math.min(Math.min(da+a2+1,db+b2+1),Math.min(de+e2+1,dd+d2+1)));
+				}
+			}
+			for(int i =1; i < imageHeight+1; i++){
+				for(int j = imageWidth; j > 0; j--){
+					double a = grayData[(i-1)*(imageWidth+2) + (j+1)];
+					double b = grayData[(i)*(imageWidth+2) + (j+1)];
+					double e = grayData[(i+1)*(imageWidth+2) + (j+1)];
+					double d = grayData[(i-1)*(imageWidth+2) + (j)];
+					double c = grayData[i*(imageWidth+2) + j];
+					
+					double a2 = grayDataTemp[(i-1)*(imageWidth+2) + (j+1)];
+					double b2 = grayDataTemp[(i)*(imageWidth+2) + (j+1)];
+					double e2 = grayDataTemp[(i+1)*(imageWidth+2) + (j+1)];
+					double d2 = grayDataTemp[(i-1)*(imageWidth+2) + (j)];
+					double c2 = grayDataTemp[i*(imageWidth+2) + j];
+					
+					double da = Math.abs(c-a);
+					double db = Math.abs(c-b);
+					double de = Math.abs(c-e);
+					double dd = Math.abs(c-d);
+					
+					grayDataTemp[i*(imageWidth+2) + j] =   alpha*Math.min(c2, Math.min(Math.min(da+a2+1,db+b2+1),Math.min(de+e2+1,dd+d2+1)));
+				}
+			}
+		}
+		double[] transformedData = new double[imageWidth*imageHeight];
+		for(int i =1; i < imageHeight+1; i++){
+			for(int j = 1; j < imageWidth+1; j++){
+				transformedData[(j-1)*imageHeight + i-1] = grayDataTemp[i*(imageWidth+2) + j];
+			}
+		}
+		return transformedData;
+	}
+	*/
+}
