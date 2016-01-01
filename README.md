@@ -153,9 +153,13 @@ This will be added later. A timing issue needs to be resolved first.
 There are images of breast tissue samples made with microscope, and we want to classify the tissue into fat, stroma and carcinoma.
 The algorithm goes through the sample images, traines its neural network and then classify every image. (nutshell version)
 For this there is the Discrete Transform On Curved Space which is a calculating a value for every pixel based on a neighborhood (3x3)
+
 a b c
+
 d e f
+
 g h i
+
 The DTOCS algorithm calculates a new value for e based on the neighborhood a,b,d,e,g, it iterates through the image in this pattern from top left to bottom right.
 Next iterates from bottom right to top left with the neighborhood c,e,f,h,i.
 Step 3 iterates from bottom left to top right with the neigborhood a,d,e,g,h.
