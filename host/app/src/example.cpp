@@ -1,7 +1,11 @@
+
+#include "DTOCSThread.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <iostream>
+
+#include <fstream>
+#include <string>
 using namespace std;
 
 // libcxl
@@ -24,53 +28,54 @@ struct wed {
   __u8   volatile status;      // 7    downto 0
   __u8   wed00_a;              // 15   downto 8
   __u16  wed00_b;              // 31   downto 16
-  __u32  size;                 // 63   downto 32
-  __u64  *source;              // 127  downto 64
-  __u64  *destination;         // 191  downto 128
-  __u64  wed03;                // 255  downto 192
-  __u64  wed04;                // 319  downto 256
-  __u64  wed05;                // 383  downto 320
-  __u64  wed06;                // 447  downto 384
-  __u64  wed07;                // 511  downto 448
-  __u64  wed08;                // 575  downto 512
-  __u64  wed09;                // 639  downto 576
-  __u64  wed10;                // 703  downto 640
-  __u64  wed11;                // 767  downto 704
-  __u64  wed12;                // 831  downto 768
-  __u64  wed13;                // 895  downto 832
-  __u64  wed14;                // 959  downto 896
-  __u64  wed15;                // 1023 downto 960
+  __u32  wed00_c;              // 63   downto 32
+  __u8   *source;              // 127  downto 64
+  __u32  *dest;                // 191  downto 128
+  __u64  width;                // 255  downto 192
+  __u64  height;               // 319  downto 256
+  __u64  alpha;                // 383  downto 320
+  __u32  *dest_temp;           // 415  downto 384
+  __u32  wed07;                // 447  downto 416
+  __u64  wed08;                // 511  downto 448
+  __u64  wed09;                // 575  downto 512
+  __u64  wed10;                // 639  downto 576
+  __u64  wed11;                // 703  downto 640
+  __u64  wed12;                // 767  downto 704
+  __u64  wed13;                // 831  downto 768
+  __u64  wed14;                // 895  downto 832
+  __u64  wed15;                // 959  downto 896
+  __u64  wed16;                // 1023 downto 960
 };
 
-int main (int argc, char *argv[]) {
+__u8 *source_image;
+__u32 *dest_image;
+__u32 h, w, a;
 
-  __u32 copy_size;
+JNIEXPORT jintArray JNICALL Java_DTOCSThread_DTOCS_1cpp
+  (JNIEnv *env, jobject obj, jintArray data, jint width, jint height, jint alpha){
 
-  // parse input arguments
-  if (argc != 2) {
-    cout << "Usage: " << APP_NAME << " <number_of_cachelines>\n";
+	jsize len_data = env->GetArrayLength(data);
+        jint *body_data = env->GetIntArrayElements(data, 0);
+
+	source_image = (__u8) body_data;
+	h = height;
+	w = width;
+	a = alpha;
+
+	transfer();
+
+        env->ReleaseIntArrayElements(array, body, 0);
+        return dest_image;
+
+}
+
+void transfer () {
+
+  // open afu device
+  struct cxl_afu_h *afu = cxl_afu_open_dev ((char*) (DEVICE));
+  if (!afu) {
+    perror ("cxl_afu_open_dev");
     return -1;
-  } else {
-    copy_size = strtoul(argv[1], NULL, 0);
-  }
-
-  __u64 *source = NULL;
-  __u64 *destination = NULL;
-
-  // allocate memory
-  if (posix_memalign ((void **) &(source), CACHELINE_BYTES, CACHELINE_BYTES * copy_size)) {
-    perror ("posix_memalign");
-    return -1;
-  }
-  if (posix_memalign ((void **) &(destination), CACHELINE_BYTES, CACHELINE_BYTES * copy_size)) {
-    perror ("posix_memalign");
-    return -1;
-  }
-
-  // initialize
-  for(unsigned i=0; i < 16*copy_size; i++) {
-    *(source+i) = (__u64) i;
-    *(destination+i) = 0;
   }
 
   // setup wed
@@ -80,18 +85,40 @@ int main (int argc, char *argv[]) {
     return -1;
   }
 
-  wed0->status = 0;
-  wed0->size = copy_size;
-  wed0->source = source;
-  wed0->destination = destination;
+  __u8 *source = NULL;
+  //if (posix_memalign ((void **) &(source), CACHELINE_BYTES, length*width*3*sizeof(char))) {
+  if (posix_memalign ((void **) &(source), CACHELINE_BYTES, h*w*sizeof(char))) {
+    perror ("posix_memalign");
+    return -1;
+  }
+  // copy source image data to cacheline aligned memory
+  //memcpy(body_data, source, h*w*3*sizeof(char));
+  memcpy(body_data, source, h*w*sizeof(char));
 
-  // open afu device
-  struct cxl_afu_h *afu = cxl_afu_open_dev ((char*) (DEVICE));
-  if (!afu) {
-    perror ("cxl_afu_open_dev");
+  wed0->source = source_image;
+  wed0->height = (__u64) h;
+  wed0->width = (__u64) w;
+  wed0->alpha = (__u64) a;
+
+  __u32 *dest = NULL;
+  if (posix_memalign ((void **) &(dest), CACHELINE_BYTES, h*w*sizeof(int))) {
+    perror ("posix_memalign");
     return -1;
   }
 
+  __u32 *dest_temp = NULL;
+  if (posix_memalign ((void **) &(dest_temp), CACHELINE_BYTES, h*w*sizeof(int))) {
+    perror ("posix_memalign");
+    return -1;
+  }
+
+  // touch destination data to prevent allocation penalty
+  memset(dest, 0, h*w*3*sizeof(int));
+  memset(dest_temp, 4294967295, h*w*sizeof(int));
+
+  wed0->dest = dest;
+  wed0->dest_temp = dest_temp;
+	
   // attach afu and pass wed address
   if (cxl_afu_attach (afu, (__u64) wed0) < 0) {
     perror ("cxl_afu_attach");
@@ -114,23 +141,10 @@ int main (int argc, char *argv[]) {
     printf("Response counter: %lu\n", rc);
   }
 
-  printf("AFU is done.\n");
+  printf("%d\n", *(dest));
+  dest_image = dest_temp;
 
-  if (memcmp(source, destination, wed0->size) != 0) {
-    printf("memcpy failed.\n");
-    for(unsigned i=0; i < copy_size; i++) {
-      for(unsigned j=15; j > 0; j--) {
-        printf("%08llx ", *(source+(i*16)+j));
-      }
-      printf("\n");
-      for(unsigned j=15; j > 0; j--) {
-        printf("%08llx ", *(destination+(i*16)+j));
-      }
-      printf("\n\n");
-    }
-  } else {
-    printf("memcpy successful.\n");
-  }
+  printf("AFU is done.\n");
 
   cxl_mmio_unmap (afu);
   cxl_afu_free (afu);
@@ -138,3 +152,10 @@ int main (int argc, char *argv[]) {
   return 0;
 
 }
+
+int main (int argc, char *argv[]){
+
+	return 0;
+
+}
+
