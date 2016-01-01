@@ -28,27 +28,63 @@ package cu_package is
 
 ----------------------------------------------------------------------------------------------------------------------- internals
 
-  type fifo_item is record
-    data      : std_logic_vector(DMA_DATA_WIDTH - 1 downto 0);
-    empty     : std_logic;
-    full      : std_logic;
-  end record;
-
   type cu_state is (
     idle,
-    copy,
-    done
+    hold,
+    done,
+    read_first_from_top,
+    first_preprocess_1_from_top,
+    first_preprocess_2_from_top,
+    read_intermediate_from_top,
+    intermediate_preprocess_1_from_top,
+    intermediate_preprocess_2_from_top,
+    read_last_from_top,
+    last_preprocess_1_from_top,
+    last_preprocess_2_from_top,
+    read_first_from_bottom,
+    first_preprocess_1_from_bottom,
+    first_preprocess_2_from_bottom,
+    read_intermediate_from_bottom,
+    intermediate_preprocess_1_from_bottom,
+    intermediate_preprocess_2_from_bottom,
+    read_last_from_bottom,
+    last_preprocess_1_from_bottom,
+    last_preprocess_2_from_bottom,
+    first_process,
+    second_process,
+    third_process,
+    fourth_process
   );
 
-  type cu_int is record
-    state     : cu_state;
-    wed       : wed_type;
-    o         : cu_out;
-    pull      : std_logic;
+  type input_buffer is record	--3 rows of the image
+    --			a row		of 8bit grayscale pixel data
+    row_0 is array of (1436+1 downto 0) of unsigned(7 downto 0);	-- sorry, hardcoded image width
+    row_1 is array of (1436+1 downto 0) of unsigned(7 downto 0);	-- sorry, hardcoded image width
+    row_2 is array of (1436+1 downto 0) of unsigned(7 downto 0);	-- sorry, hardcoded image width
   end record;
 
-  type cu_ext is record
-    fifo      : fifo_item;
+  type temp_buffer is record	--3 rows of the image
+    --			a row		of 32bit intermediate sub result data
+    row_0 is array of (1436+1 downto 0) of unsigned(31 downto 0);	-- sorry, hardcoded image width
+    row_1 is array of (1436+1 downto 0) of unsigned(31 downto 0);	-- sorry, hardcoded image width
+    row_2 is array of (1436+1 downto 0) of unsigned(31 downto 0);	-- sorry, hardcoded image width
+  end record;
+
+  intermediate_res is array of (13 downto 0) of unsigned(31 downto 0);
+
+  counter_type : unsigned(9 downto 0);
+
+  type cu_int is record
+    in_buffer     : input_buffer;
+    temp_buffer   : temp_buffer;
+    sub_res       : intermediate_res;
+    in_counter    : counter_type;
+    temp_counter  : counter_type;
+    outer_counter : counter_type;
+    state         : cu_state;
+    caller_state  : cu_state;
+    wed           : wed_type;
+    o             : cu_out;
   end record;
 
   procedure cu_reset (signal r : inout cu_int);
@@ -60,8 +96,14 @@ package body cu_package is
   procedure cu_reset (signal r : inout cu_int) is
   begin
     r.state   <= idle;
+    r.caller_state <= idle;
     r.o.done  <= '0';
-    r.pull    <= '0';
+    r.in_buffer <= (others => (others => '0', others => '0', others => '0'));
+    r.temp_buffer <= (others => (others => x"FFFFFFFF", others => x"FFFFFFFF", others => x"FFFFFFFF"));
+    r.sub_res <= (others => (others => '0'));
+    r.in_counter <= (others => '0');
+    r.temp_counter <= (others => '0');
+    r.outer_counter <= (others => '0');
   end procedure cu_reset;
 
 end package body cu_package;
