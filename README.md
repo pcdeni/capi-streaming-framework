@@ -145,3 +145,35 @@ The `vsim.tcl` script also allows to quickly run the following commands again fr
 ## FPGA build
 
 This will be added later. A timing issue needs to be resolved first.
+
+# Medical image processing pipeline
+
+## About the pipeline
+
+There are images of breast tissue samples made with microscope, and we want to classify the tissue into fat, stroma and carcinoma.
+The algorithm goes through the sample images, traines its neural network and then classify every image. (nutshell version)
+For this there is the Discrete Transform On Curved Space which is a calculating a value for every pixel based on a neighborhood (3x3)
+a b c
+d e f
+g h i
+The DTOCS algorithm calculates a new value for e based on the neighborhood a,b,d,e,g, it iterates through the image in this pattern from top left to bottom right.
+Next iterates from bottom right to top left with the neighborhood c,e,f,h,i.
+Step 3 iterates from bottom left to top right with the neigborhood a,d,e,g,h.
+Step 4, top right to bottom left, b,c,e,f,i.
+Then it repeats these 4 steps 4 times, so we have 16 steps.
+The catch is that we have big images, and whenewer we calculated the new value for e we don't need the old value, but the new one.
+
+## Implementation
+
+The algorithm runs in Spark which is ~java, which runs in java virtual machine.
+We want to accelerate the DTOCS part of the algorithm with an FPGA on an IBM Power 8 system using CAPI, but how can we pass variables to the accelerator?
+We have a cpp function for that, but how do we pass variables from java to cpp?
+There is Java Native Interface for that. :)
+So whenewer we call the DTOCS in spark it will actually call a cpp function, which then gives the physical memory addresses of the passed variables to the FPGA, it processes the data and writes the results back to a memory region with a predefined starting address.
+Simple, right? 
+
+I don't get into the details of the memory organization and how to pass data to the FPGA, MBROBBEL implemented it and explained it, go take a look on the original repo.
+
+## JNI
+
+http://www.ibm.com/developerworks/java/tutorials/j-jni/j-jni.html
