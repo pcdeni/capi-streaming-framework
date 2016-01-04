@@ -44,6 +44,9 @@ This will be added later.
   * *`wave.do`* - Wave script for vsim
 * *`Makefile`* - Global makefile
 
+* `Images` - Input Images
+* `PipeLineTiffSparkDTOCS` - Scala and Java code
+
 ## Details
 
 This will be added later.
@@ -180,4 +183,28 @@ I don't get into the details of the memory organization and how to pass data to 
 
 ## JNI
 
-http://www.ibm.com/developerworks/java/tutorials/j-jni/j-jni.html
+In DTOCSThread.java
+  ```bash
+  public native int[] DTOCS_cpp (int[] data /*24x*/, int imageWidth /*1436*/, int imageHeight /*814*/, int alpha);
+  ```
+and
+  ```bash
+  System.loadLibrary("libDTOCSThread");
+  ```
+then run
+   ```bash
+  javac DTOCSThread.java
+  javah DTOCSThread
+  ```
+Now you get DTOCSThread.h, from there you can copy
+  ```bash
+  JNIEXPORT jintArray JNICALL Java_DTOCSThread_DTOCS_1cpp
+  (JNIEnv *, jobject, jintArray, jint, jint, jint);
+  ```
+to cpp.
+Then run
+  ```bash
+  cl -Ic:\jdk\include -Ic:\jdk\include\win32 -LD Sample1.c -FeSample1.dll
+  ```
+For additional info: http://www.ibm.com/developerworks/java/tutorials/j-jni/j-jni.html
+  
