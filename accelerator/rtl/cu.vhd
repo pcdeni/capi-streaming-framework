@@ -194,13 +194,13 @@ begin
       	for iterator in v.wed.imagewidth downto 1 loop
       		v.sub_res(13) := v.in_buffer.row_0(iterator+1);
       		v.sub_res(12) := v.in_buffer.row_1(iterator+1);
-      		v.sub_res(11) := v.in_buffer.row_2(iterator+1);
+      		v.sub_res(11) := v.in_buffer.row_0(iterator-1);
       		v.sub_res(10) := v.in_buffer.row_0(iterator);
       		v.sub_res(9)  := v.in_buffer.row_1(iterator);
 
       		v.sub_res(8) := v.temp_buffer.row_0(iterator+1);
       		v.sub_res(7) := v.temp_buffer.row_1(iterator+1);
-      		v.sub_res(6) := v.temp_buffer.row_2(iterator+1);
+      		v.sub_res(6) := v.temp_buffer.row_0(iterator-1);
       		v.sub_res(5) := v.temp_buffer.row_0(iterator);
       		v.sub_res(4) := v.temp_buffer.row_1(iterator);
       	
@@ -233,16 +233,16 @@ begin
 
       when second_process =>
         for iterator in 1 to v.wed.imagewidth loop
-          v.sub_res(13) := v.in_buffer.row_0(iterator-1);
+          v.sub_res(13) := v.in_buffer.row_2(iterator+1);
           v.sub_res(12) := v.in_buffer.row_1(iterator-1);
           v.sub_res(11) := v.in_buffer.row_2(iterator-1);
-          v.sub_res(10) := v.in_buffer.row_0(iterator);
+          v.sub_res(10) := v.in_buffer.row_1(iterator);
           v.sub_res(9)  := v.in_buffer.row_2(iterator);
 
-          v.sub_res(8) := v.temp_buffer.row_0(iterator-1);
+          v.sub_res(8) := v.temp_buffer.row_2(iterator+1);
           v.sub_res(7) := v.temp_buffer.row_1(iterator-1);
           v.sub_res(6) := v.temp_buffer.row_2(iterator-1);
-          v.sub_res(5) := v.temp_buffer.row_0(iterator);
+          v.sub_res(5) := v.temp_buffer.row_1(iterator);
           v.sub_res(4) := v.temp_buffer.row_2(iterator);
         
           v.sub_res(3) := abs(v.sub_res(9) - v.sub_res(13));
@@ -273,16 +273,16 @@ begin
 
       when third_process =>
         for iterator in 1 to v.wed.imagewidth loop
-          v.sub_res(13) := v.in_buffer.row_0(iterator+1);
+          v.sub_res(13) := v.in_buffer.row_2(iterator-1);
           v.sub_res(12) := v.in_buffer.row_1(iterator+1);
           v.sub_res(11) := v.in_buffer.row_2(iterator+1);
-          v.sub_res(10) := v.in_buffer.row_0(iterator);
+          v.sub_res(10) := v.in_buffer.row_1(iterator);
           v.sub_res(9)  := v.in_buffer.row_2(iterator);
 
-          v.sub_res(8) := v.temp_buffer.row_0(iterator+1);
+          v.sub_res(8) := v.temp_buffer.row_2(iterator-1);
           v.sub_res(7) := v.temp_buffer.row_1(iterator+1);
           v.sub_res(6) := v.temp_buffer.row_2(iterator+1);
-          v.sub_res(5) := v.temp_buffer.row_0(iterator);
+          v.sub_res(5) := v.temp_buffer.row_1(iterator);
           v.sub_res(4) := v.temp_buffer.row_2(iterator);
         
           v.sub_res(3) := abs(v.sub_res(9) - v.sub_res(13));
@@ -313,15 +313,15 @@ begin
 
       when fourth_process =>
         for iterator in v.wed.imagewidth downto 1 loop
-          v.sub_res(13) := v.in_buffer.row_0(iterator-1);
-          v.sub_res(12) := v.in_buffer.row_1(iterator-1);
-          v.sub_res(11) := v.in_buffer.row_2(iterator-1);
+          v.sub_res(13) := v.in_buffer.row_0(iterator+1);
+          v.sub_res(12) := v.in_buffer.row_0(iterator-1);
+          v.sub_res(11) := v.in_buffer.row_1(iterator-1);
           v.sub_res(10) := v.in_buffer.row_0(iterator);
           v.sub_res(9)  := v.in_buffer.row_1(iterator);
 
-          v.sub_res(8) := v.temp_buffer.row_0(iterator-1);
-          v.sub_res(7) := v.temp_buffer.row_1(iterator-1);
-          v.sub_res(6) := v.temp_buffer.row_2(iterator-1);
+          v.sub_res(8) := v.temp_buffer.row_0(iterator+1);
+          v.sub_res(7) := v.temp_buffer.row_0(iterator-1);
+          v.sub_res(6) := v.temp_buffer.row_1(iterator-1);
           v.sub_res(5) := v.temp_buffer.row_0(iterator);
           v.sub_res(4) := v.temp_buffer.row_1(iterator);
         
