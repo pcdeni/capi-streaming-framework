@@ -163,10 +163,10 @@ d e f
 
 g h i
 
-The DTOCS algorithm calculates a new value for e based on the neighborhood a,b,d,e,g, it iterates through the image in this pattern from top left to bottom right.
-Next iterates from bottom right to top left with the neighborhood c,e,f,h,i.
-Step 3 iterates from bottom left to top right with the neigborhood a,d,e,g,h.
-Step 4, top right to bottom left, b,c,e,f,i.
+The DTOCS algorithm calculates a new value for e based on the neighborhood a,b,c,d,e, it iterates through the image in this pattern from top left to bottom right.
+Next iterates from bottom right to top left with the neighborhood e,f,g,h,i.
+Step 3 iterates from bottom left to top right with the neigborhood d,e,g,h,i.
+Step 4, top right to bottom left, a,b,c,e,f.
 Then it repeats these 4 steps 4 times, so we have 16 steps.
 The catch is that we have big images, and whenewer we calculated the new value for e we don't need the old value, but the new one.
 
